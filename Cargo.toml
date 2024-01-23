@@ -1,0 +1,16 @@
+[package]
+name = "spoilers"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+image = "*"
+ocrs = "*"
+pyo3 = { version = "*", features = [ "auto-initialize" ] }
+rten = "*"
+rten-tensor = "*"
+textwrap = "*"
+xcap.git = "https://github.com/nashaofu/xcap"
