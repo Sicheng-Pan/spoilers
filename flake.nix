@@ -16,29 +16,24 @@
         pkgs = nixpkgs.legacyPackages.${system};
         fenixPkgs = fenix.packages.${system};
         craneLib = crane.lib.${system};
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+        src = craneLib.path ./.;
 
         # Common arguments can be set here to avoid repeating them later
-        commonArgs = {
+        commonArgs = with pkgs; {
           inherit src;
           strictDeps = true;
+          nativeBuildInputs = [ pkg-config ];
           buildInputs = [
             # Add additional build inputs here
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            ctranslate2
+            openssl
+          ] ++ lib.optionals stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
-            pkgs.libiconv
+            libiconv
           ];
-
-          # Additional environment variables can be set directly
-          # MY_CUSTOM_VAR = "some value";
         };
 
-        craneLibLLvmTools = craneLib.overrideToolchain
-          (fenixPkgs.complete.withComponents [
-            "cargo"
-            "llvm-tools"
-            "rustc"
-          ]);
+        craneLibLLvmTools = craneLib.overrideToolchain fenixPkgs.complete;
 
         # Build *just* the cargo dependencies, so we can reuse
         # all of that work (e.g. via cachix) when running in CI
@@ -106,25 +101,18 @@
           drv = crate;
         };
 
-        devShells.default = craneLib.devShell {
+        devShells.default = craneLib.devShell (commonArgs // {
           # Inherit inputs from checks.
           # Enable after Cargo.toml and Cargo.lock are present
           checks = self.checks.${system};
 
-          # Additional dev-shell environment variables can be set directly
-          # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
-
           # Extra inputs can be added here; cargo and rustc are provided by default.
-          packages = with pkgs; [
+          packages = [
             fenixPkgs.rust-analyzer
-            xorg.libxcb
-            (python3.withPackages (ps: with ps; [
-              argostranslate
-            ]))
+            pkgs.xorg.libxcb
           ];
-
-          XDG_DATA_HOME = "target/data";
-          XDG_CACHE_HOME = "target/cache";
-        };
+          
+          RUST_SRC_PATH = "${fenixPkgs.complete.rust-src}/lib/rustlib/src/rust/library";
+        });
       });
 }
