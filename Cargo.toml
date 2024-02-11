@@ -5,17 +5,19 @@ edition = "2021"
 license = "GPL-2.0-or-later"
 
 [build-dependencies]
-# bindgen = "*"
 cxx-build = "*"
 
 [dependencies]
 anyhow = "*"
 cxx = "*"
+eframe = { version = "*", features = [ "persistence" ] }
+egui = "*"
 ocrs = "*"
+once_cell = "*"
 rten = "*"
 rten-tensor = "*"
-textwrap = "*"
+serde = { version = "*", features = [ "derive" ] }
+strum = { version = "*", features = [ "derive" ] }
 tokenizers = { version = "*", features = [ "http" ] }
-
-# Wait for KDE wayland support and update to crates.io
-xcap.github = "https://github.com/nashaofu/xcap"
+toml = "*"
+xcap = "*"

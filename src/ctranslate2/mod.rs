@@ -1,7 +1,9 @@
+use self::wrapper::ReplicaPoolConfig;
+
 #[cxx::bridge(namespace = "ctranslate2")]
 pub mod wrapper {
     #[allow(non_camel_case_types)]
-    #[derive(Debug)]
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[repr(u32)]
     pub enum ComputeType {
         DEFAULT,
@@ -16,14 +18,14 @@ pub mod wrapper {
         BFLOAT16,
     }
 
-    #[derive(Debug)]
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
     #[repr(u32)]
     pub enum Device {
         CPU,
         CUDA,
     }
 
-    #[derive(Debug)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub struct ReplicaPoolConfig {
         pub num_threads_per_replica: usize,
         pub max_queued_batches: i64,
@@ -67,3 +69,13 @@ pub mod wrapper {
 
     }
 }
+
+impl PartialEq for ReplicaPoolConfig {
+    fn eq(&self, other: &Self) -> bool {
+        return self.num_threads_per_replica == other.num_threads_per_replica
+            && self.max_queued_batches == other.max_queued_batches
+            && self.cpu_core_offset == other.cpu_core_offset;
+    }
+}
+
+impl Eq for ReplicaPoolConfig {}

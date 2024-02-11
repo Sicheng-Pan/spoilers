@@ -1,38 +1,63 @@
-use crate::ctranslate2::wrapper::{
-    device_auto, new_translator, ComputeType, Device, ReplicaPoolConfig, TranslatorWrapper,
+use crate::{
+    adapter::Adapter,
+    ctranslate2::wrapper::{
+        device_auto, new_translator, ComputeType, Device, ReplicaPoolConfig, TranslatorWrapper,
+    },
 };
 use anyhow::Result;
 use cxx::UniquePtr;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-pub enum Language {
-    Chinese,
-    English,
-    Japanese,
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TranslatorConfig {
+    pub model_path: String,
+    pub device: Device,
+    pub compute_type: ComputeType,
+    pub device_indices: Vec<i32>,
+    pub config: ReplicaPoolConfig,
 }
 
-pub trait Adapter {
-    fn encode(&self, source: String, language: Language) -> Result<Vec<String>>;
-    fn decode(&self, tokens: Vec<String>) -> Result<String>;
-    fn target_prefix(&self, language: Language) -> Vec<String>;
+impl TranslatorConfig {
+    pub fn initialize(&self) -> Result<Translator> {
+        Translator::new(
+            &self.model_path,
+            self.device,
+            self.compute_type,
+            self.device_indices.clone(),
+            self.config.clone(),
+        )
+    }
+}
+
+impl Default for TranslatorConfig {
+    fn default() -> Self {
+        Self {
+            model_path: String::new(),
+            device: device_auto(),
+            compute_type: ComputeType::DEFAULT,
+            device_indices: vec![0],
+            config: ReplicaPoolConfig {
+                num_threads_per_replica: 0,
+                max_queued_batches: 0,
+                cpu_core_offset: -1,
+            },
+        }
+    }
 }
 
 pub struct Translator {
-    adapter: Box<dyn Adapter>,
     ctranslate2: UniquePtr<TranslatorWrapper>,
 }
 
 impl Translator {
     pub fn new(
-        adapter: Box<dyn Adapter>,
         model_path: impl AsRef<str>,
         device: Device,
         compute_type: ComputeType,
         device_indices: Vec<i32>,
         config: ReplicaPoolConfig,
     ) -> Result<Self> {
-        Ok(Translator {
-            adapter,
+        Ok(Self {
             ctranslate2: new_translator(
                 model_path.as_ref().into(),
                 device,
@@ -43,31 +68,21 @@ impl Translator {
         })
     }
 
-    pub fn new_default(adapter: Box<dyn Adapter>, model_path: impl AsRef<str>) -> Result<Self> {
-        Self::new(
-            adapter,
-            model_path,
-            device_auto(),
-            ComputeType::DEFAULT,
-            vec![0],
-            ReplicaPoolConfig {
-                num_threads_per_replica: 0,
-                max_queued_batches: 0,
-                cpu_core_offset: -1,
-            },
-        )
-    }
-
     pub fn translate(
         &self,
-        source: impl AsRef<str>,
-        from_language: Language,
-        to_language: Language,
+        adapter: impl Adapter,
+        source_content: impl AsRef<str>,
+        source_language: impl AsRef<str>,
+        target_language: impl AsRef<str>,
     ) -> Result<String> {
-        let from_tokens = self.adapter.encode(source.as_ref().into(), from_language)?;
-        let to_tokens = self
-            .ctranslate2
-            .translate(from_tokens, self.adapter.target_prefix(to_language))?;
-        Ok(self.adapter.decode(to_tokens)?)
+        let source_tokens = adapter.encode(
+            source_content.as_ref().into(),
+            source_language.as_ref().into(),
+        )?;
+        let target_tokens = self.ctranslate2.translate(
+            source_tokens,
+            adapter.target_prefix(target_language.as_ref().into())?,
+        )?;
+        Ok(adapter.decode(target_tokens)?)
     }
 }

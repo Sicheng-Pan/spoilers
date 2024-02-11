@@ -19,18 +19,29 @@
         src = craneLib.path ./.;
 
         # Common arguments can be set here to avoid repeating them later
-        commonArgs = with pkgs; {
+        commonArgs = with pkgs; rec {
           inherit src;
           strictDeps = true;
           nativeBuildInputs = [ pkg-config ];
           buildInputs = [
             # Add additional build inputs here
             ctranslate2
+            fontconfig
+            libGL
+            libxkbcommon
             openssl
-          ] ++ lib.optionals stdenv.isDarwin [
+            wayland
+          ] ++ (with xorg; [
+            libX11
+            libXcursor
+            libXi
+            libXrandr
+          ]) ++ lib.optionals stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             libiconv
           ];
+          LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
+          SARASA_GOTHIC_PATH = "${sarasa-gothic}/share/fonts/truetype/Sarasa-Regular.ttc";
         };
 
         craneLibLLvmTools = craneLib.overrideToolchain fenixPkgs.complete;
