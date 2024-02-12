@@ -1,4 +1,4 @@
-use self::wrapper::ReplicaPoolConfig;
+use self::wrapper::{ReplicaPoolConfig, TokenVec};
 
 #[cxx::bridge(namespace = "ctranslate2")]
 pub mod wrapper {
@@ -32,6 +32,11 @@ pub mod wrapper {
         pub cpu_core_offset: i32,
     }
 
+    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+    pub struct TokenVec {
+        pub tokens: Vec<String>,
+    }
+
     unsafe extern "C++" {
         include!("ctranslate2/types.h");
         type ComputeType;
@@ -54,9 +59,9 @@ pub mod wrapper {
 
         pub fn translate(
             &self,
-            source_tokens: Vec<String>,
-            target_prefix: Vec<String>,
-        ) -> Result<Vec<String>>;
+            source_batches: Vec<TokenVec>,
+            target_prefixes: Vec<TokenVec>,
+        ) -> Result<Vec<TokenVec>>;
 
         pub fn device_auto() -> Device;
         pub fn new_translator(
@@ -79,3 +84,11 @@ impl PartialEq for ReplicaPoolConfig {
 }
 
 impl Eq for ReplicaPoolConfig {}
+
+impl TokenVec {
+    pub fn new(tokens: impl Iterator<Item = impl AsRef<str>>) -> Self {
+        Self {
+            tokens: tokens.map(|token| token.as_ref().into()).collect(),
+        }
+    }
+}

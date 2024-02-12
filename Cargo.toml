@@ -4,20 +4,29 @@ version = "0.1.0"
 edition = "2021"
 license = "GPL-2.0-or-later"
 
+[[bin]]
+name = "spoilers"
+required-features = [ "app" ]
+
 [build-dependencies]
 cxx-build = "*"
 
 [dependencies]
 anyhow = "*"
 cxx = "*"
-eframe = { version = "*", features = [ "persistence" ] }
-egui = "*"
-ocrs = "*"
+eframe = { version = "*", features = [ "persistence" ], optional = true }
+egui = { version = "*", optional = true }
+egui_commonmark = { version = "*", optional = true }
+ocrs = { version = "*", optional = true }
 once_cell = "*"
-rten = "*"
-rten-tensor = "*"
+rten = { version = "*", optional = true }
 serde = { version = "*", features = [ "derive" ] }
 strum = { version = "*", features = [ "derive" ] }
+text-splitter = { version = "*", features = [ "tokenizers" ] }
 tokenizers = { version = "*", features = [ "http" ] }
 toml = "*"
-xcap = "*"
+xcap = { version = "*", optional = true }
+
+[features]
+app = [ "eframe", "egui", "egui_commonmark" ]
+default = [ "app" ]

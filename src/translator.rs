@@ -75,14 +75,15 @@ impl Translator {
         source_language: impl AsRef<str>,
         target_language: impl AsRef<str>,
     ) -> Result<String> {
-        let source_tokens = adapter.encode(
+        let source_batches = adapter.encode(
             source_content.as_ref().into(),
             source_language.as_ref().into(),
         )?;
-        let target_tokens = self.ctranslate2.translate(
-            source_tokens,
-            adapter.target_prefix(target_language.as_ref().into())?,
-        )?;
-        Ok(adapter.decode(target_tokens)?)
+        let prefix = adapter.target_prefix(target_language.as_ref().into())?;
+        let target_prefixes = source_batches.iter().map(|_| prefix.clone()).collect();
+        let target_tokens = self
+            .ctranslate2
+            .translate(source_batches, target_prefixes)?;
+        adapter.decode(target_tokens)
     }
 }

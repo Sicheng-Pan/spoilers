@@ -6,5 +6,5 @@ mod test;
 pub mod translator;
 
 pub fn emsg(e: impl ToString) -> Error {
-    return Error::msg(e.to_string());
+    Error::msg(e.to_string())
 }

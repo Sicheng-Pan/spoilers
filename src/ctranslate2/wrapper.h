@@ -1,7 +1,10 @@
-#include <ctranslate2/translator.h>
-#include <rust/cxx.h>
+#include "ctranslate2/translator.h"
+#include "rust/cxx.h"
+#pragma once
 
 namespace ctranslate2 {
+
+  struct TokenVec;
 
   class TranslatorWrapper {
     public:
@@ -12,7 +15,7 @@ namespace ctranslate2 {
         const std::vector<int>& device_indices,
         const ReplicaPoolConfig& config
       );
-      rust::Vec<rust::String> translate(rust::Vec<rust::String>, rust::Vec<rust::String>) const;
+      rust::Vec<TokenVec> translate(rust::Vec<TokenVec>, rust::Vec<TokenVec>) const;
     
     private:
       std::unique_ptr<Translator> translator;

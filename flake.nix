@@ -44,7 +44,12 @@
           SARASA_GOTHIC_PATH = "${sarasa-gothic}/share/fonts/truetype/Sarasa-Regular.ttc";
         };
 
-        craneLibLLvmTools = craneLib.overrideToolchain fenixPkgs.complete;
+        craneLibLLvmTools = craneLib.overrideToolchain
+          (fenixPkgs.complete.withComponents [
+            "cargo"
+            "llvm-tools"
+            "rustc"
+          ]);
 
         # Build *just* the cargo dependencies, so we can reuse
         # all of that work (e.g. via cachix) when running in CI
@@ -103,7 +108,8 @@
 
         packages = {
           default = crate;
-          llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs // {
+        } // pkgs.lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
+          my-crate-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs // {
             inherit cargoArtifacts;
           });
         };

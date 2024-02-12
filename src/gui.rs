@@ -1,24 +1,27 @@
-use std::fmt::Display;
-
 use eframe::{get_value, set_value, App, CreationContext, Frame, Storage, APP_KEY};
 use egui::{
-    global_dark_light_mode_switch, menu::bar, CentralPanel, ComboBox, Context, FontData,
-    FontDefinitions, FontFamily, TopBottomPanel, Ui,
+    global_dark_light_mode_switch, menu::bar, CentralPanel, ComboBox, Context, Direction, FontData,
+    FontDefinitions, FontFamily, Layout, ScrollArea, TopBottomPanel, Ui,
 };
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::{Deserialize, Serialize};
 use spoilers::{
     adapter::{Adapter, AdapterConfig, AdapterKind},
     translator::{Translator, TranslatorConfig},
 };
+use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
 const CJK: &str = "Sarasa-Gothic-Regular";
+const CJK_BINARY: &[u8] = include_bytes!(env!("SARASA_GOTHIC_PATH"));
+const README: &str = include_str!("../README.md");
 
 #[derive(Clone, Debug, Default, Deserialize, EnumDisplay, EnumIter, Eq, PartialEq, Serialize)]
 pub enum GUIMode {
-    Text,
-    #[default]
+    Translate,
     Config,
+    #[default]
+    Readme,
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -39,10 +42,9 @@ pub struct TranslatorGUI {
 impl TranslatorGUI {
     pub fn new(cc: &CreationContext) -> Self {
         let mut gui_font = FontDefinitions::default();
-        gui_font.font_data.insert(
-            CJK.into(),
-            FontData::from_static(include_bytes!(env!("SARASA_GOTHIC_PATH"))),
-        );
+        gui_font
+            .font_data
+            .insert(CJK.into(), FontData::from_static(CJK_BINARY));
         gui_font
             .families
             .entry(FontFamily::Proportional)
@@ -51,7 +53,7 @@ impl TranslatorGUI {
         cc.egui_ctx.set_fonts(gui_font);
         let mut gui: TranslatorGUI = cc
             .storage
-            .map(|s| get_value(s, APP_KEY).unwrap_or_default())
+            .map(|storage| get_value(storage, APP_KEY).unwrap_or_default())
             .unwrap_or_default();
         gui.reload_adapter();
         gui.reload_translator();
@@ -59,52 +61,22 @@ impl TranslatorGUI {
     }
 
     pub fn reload_adapter(&mut self) {
-        if let Ok(adapter) = self.adapter_config.initialize() {
-            self.adapter = Some(adapter)
-        }
+        self.adapter = self.adapter_config.initialize().ok();
     }
 
     pub fn reload_translator(&mut self) {
-        if let Ok(translator) = self.translator_config.initialize() {
-            self.translator = Some(translator)
-        }
+        self.translator = self.translator_config.initialize().ok();
     }
 
-    pub fn config_panel(&mut self, ctx: &Context, frame: &mut Frame) {
-        CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let adapter_label = ui.label("Adapter path:");
-                ui.text_edit_singleline(&mut self.adapter_config.source)
-                    .labelled_by(adapter_label.id);
-                ComboBox::from_id_source("adapter_kind")
-                    .selected_text(format!("{:?}", self.adapter_config.kind))
-                    .show_ui(ui, |ui| {
-                        enum_to_selectable(ui, &mut self.adapter_config.kind, AdapterKind::iter());
-                    });
-                if ui.button("Reload adapter").clicked() {
-                    self.reload_adapter()
-                }
-            });
-            ui.horizontal(|ui| {
-                let model_label = ui.label("Model path:");
-                ui.text_edit_singleline(&mut self.translator_config.model_path)
-                    .labelled_by(model_label.id);
-                if ui.button("Reload translator").clicked() {
-                    self.reload_translator();
-                }
-            });
-        });
-    }
-
-    pub fn text_translate_panel(&mut self, ctx: &Context, frame: &mut Frame) {
+    pub fn text_translate_panel(&mut self, ctx: &Context) {
         CentralPanel::default().show(ctx, |ui| {
             if let (Some(adapter), Some(translator)) =
                 (self.adapter.as_ref(), self.translator.as_ref())
             {
                 ui.columns(2, |columns| {
                     columns[0].horizontal(|ui| {
-                        ui.label("From");
-                        ComboBox::from_id_source("source_language")
+                        let from_label = ui.label("From");
+                        ComboBox::from_id_source(from_label.id)
                             .selected_text(&self.source_language)
                             .show_ui(ui, |ui| {
                                 enum_to_selectable(
@@ -114,10 +86,20 @@ impl TranslatorGUI {
                                 );
                             });
                     });
-                    columns[0].text_edit_multiline(&mut self.source_content);
+                    ScrollArea::vertical()
+                        .id_source("source_panel")
+                        .show(&mut columns[0], |ui| {
+                            ui.allocate_ui_with_layout(
+                                ui.available_size(),
+                                Layout::centered_and_justified(Direction::TopDown),
+                                |ui| {
+                                    ui.text_edit_multiline(&mut self.source_content);
+                                },
+                            );
+                        });
                     columns[1].horizontal(|ui| {
-                        ui.label("To");
-                        ComboBox::from_id_source("target_language")
+                        let to_label = ui.label("To");
+                        ComboBox::from_id_source(to_label.id)
                             .selected_text(&self.target_language)
                             .show_ui(ui, |ui| {
                                 enum_to_selectable(
@@ -126,27 +108,97 @@ impl TranslatorGUI {
                                     adapter.available_languages().into_iter(),
                                 );
                             });
+                        if ui.button("Translate").clicked() {
+                            self.target_content = translator
+                                .translate(
+                                    adapter,
+                                    &self.source_content,
+                                    &self.source_language,
+                                    &self.target_language,
+                                )
+                                .unwrap_or_default();
+                        }
                     });
-                    columns[1].label(&self.target_content);
+                    ScrollArea::vertical()
+                        .id_source("target_panel")
+                        .show(&mut columns[1], |ui| {
+                            ui.allocate_ui_with_layout(
+                                ui.available_size(),
+                                Layout::centered_and_justified(Direction::TopDown),
+                                |ui| {
+                                    ui.label(&self.target_content);
+                                },
+                            );
+                        });
                 });
-                if ui.button("Translate").clicked() {
-                    self.target_content = translator
-                        .translate(
-                            adapter,
-                            &self.source_content,
-                            &self.source_language,
-                            &self.target_language,
-                        )
-                        .unwrap_or_default();
-                }
             } else {
-                if self.adapter.is_none() {
-                    ui.label("Please load the adapter");
-                }
-                if self.translator.is_none() {
-                    ui.label("Please load the translator");
-                }
+                ui.allocate_ui_with_layout(
+                    ui.available_size(),
+                    Layout::centered_and_justified(Direction::TopDown),
+                    |ui| {
+                        ui.label(format!(
+                            "Please reload the config using the {} panel",
+                            GUIMode::Config
+                        ));
+                    },
+                );
             }
+        });
+    }
+
+    pub fn config_panel(&mut self, ctx: &Context) {
+        CentralPanel::default().show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let adapter_label = ui.label("Adapater kind:");
+                ComboBox::from_id_source(adapter_label.id)
+                    .selected_text(format!("{}", self.adapter_config.kind))
+                    .show_ui(ui, |ui| {
+                        enum_to_selectable(ui, &mut self.adapter_config.kind, AdapterKind::iter());
+                    });
+            });
+            ui.horizontal(|ui| {
+                let adapter_label = ui.label("Adapater source:");
+                ui.text_edit_singleline(&mut self.adapter_config.source)
+                    .labelled_by(adapter_label.id)
+                    .on_hover_ui(|ui| {
+                        let hint = match self.adapter_config.kind {
+                            AdapterKind::None => "Not used",
+                            AdapterKind::NLLBTokenizerHub => "Identifier of model on Hugging Face (e.g. facebook/nllb-200-distilled-600M)",
+                            AdapterKind::NLLBTokenizerLocal => "Path to the local tokenizer weights (e.g. tokenizer.json)",
+                        };
+                        ui.label(hint);
+                    });
+            });
+            ui.horizontal(|ui| {
+                let model_label = ui.label("Model:");
+                ui.text_edit_singleline(&mut self.translator_config.model_path)
+                    .labelled_by(model_label.id)
+                    .on_hover_ui(|ui| {
+                        ui.label("Path to the directory containing model files");
+                    });
+            });
+            ui.horizontal(|ui| {
+                if ui.button("Reload adapter").clicked() {
+                    self.reload_adapter();
+                }
+                if ui.button("Reload translator").clicked() {
+                    self.reload_translator();
+                }
+            })
+        });
+    }
+
+    pub fn readme_panel(&mut self, ctx: &Context) {
+        CentralPanel::default().show(ctx, |ui| {
+            ScrollArea::vertical()
+                .id_source("readme_panel")
+                .show(ui, |ui| {
+                    CommonMarkViewer::new("readme_viewer").show(
+                        ui,
+                        &mut CommonMarkCache::default(),
+                        README,
+                    );
+                })
         });
     }
 }
@@ -156,7 +208,7 @@ impl App for TranslatorGUI {
         set_value(storage, APP_KEY, self)
     }
 
-    fn update(&mut self, ctx: &Context, frame: &mut Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         TopBottomPanel::top("menu").show(ctx, |ui| {
             bar(ui, |ui| {
                 global_dark_light_mode_switch(ui);
@@ -164,10 +216,24 @@ impl App for TranslatorGUI {
             });
         });
 
+        TopBottomPanel::bottom("status").show(ctx, |ui| {
+            bar(ui, |ui| {
+                ui.label(match self.adapter {
+                    Some(_) => "Adapter loaded",
+                    None => "No adapter loaded",
+                });
+                ui.label(match self.translator {
+                    Some(_) => "Model loaded",
+                    None => "No model loaded",
+                })
+            });
+        });
+
         match self.gui_mode {
-            GUIMode::Config => self.config_panel(ctx, frame),
-            GUIMode::Text => self.text_translate_panel(ctx, frame),
-        }
+            GUIMode::Translate => self.text_translate_panel(ctx),
+            GUIMode::Config => self.config_panel(ctx),
+            GUIMode::Readme => self.readme_panel(ctx),
+        };
     }
 }
 

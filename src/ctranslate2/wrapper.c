@@ -1,3 +1,4 @@
+#include "spoilers/src/ctranslate2/mod.rs.h"
 #include "spoilers/src/ctranslate2/wrapper.h"
 
 namespace ctranslate2 {
@@ -12,26 +13,35 @@ namespace ctranslate2 {
     model_path, device, compute_type, device_indices, config
   )) {};
 
-  rust::Vec<rust::String> TranslatorWrapper::translate(
-    rust::Vec<rust::String> source_tokens,
-    rust::Vec<rust::String> target_prefix
+  rust::Vec<TokenVec> TranslatorWrapper::translate(
+    rust::Vec<TokenVec> source_batches,
+    rust::Vec<TokenVec> target_prefixes
   ) const {
-    std::vector<std::string> localized;
-    for(auto &rs : source_tokens) {
-      localized.push_back(std::string(rs));
+    std::vector<std::vector<std::string>> source, target_prefix;
+    for (auto batch : source_batches) {
+      std::vector<std::string> source_tokens;
+      for (auto token : batch.tokens) {
+        source_tokens.push_back(std::string(token));
+      }
+      source.push_back(source_tokens);
     }
-    std::vector<std::vector<std::string>> container{ localized };
-    std::vector<std::string> initial;
-    for(auto &rp : target_prefix) {
-      initial.push_back(std::string(rp));    
+    for (auto prefix : target_prefixes) {
+      std::vector<std::string> prefix_tokens;
+      for (auto token : prefix.tokens) {
+        prefix_tokens.push_back(std::string(token));
+      }
+      target_prefix.push_back(prefix_tokens);
     }
-    std::vector<std::vector<std::string>> prefix{ initial };
-    auto product = translator->translate_batch(container, prefix).at(0).output();
-    rust::Vec<rust::String> delivery;
-    for (auto &cs : product) {
-      delivery.push_back(rust::String(cs));
+    auto translation_results = translator->translate_batch(source, target_prefix);
+    rust::Vec<TokenVec> target_batches;
+    for (auto result : translation_results) {
+      rust::Vec<rust::String> target_tokens;
+      for (auto token : result.output()) {
+        target_tokens.push_back(rust::String(token));
+      }
+      target_batches.push_back({ target_tokens });
     }
-    return delivery;
+    return target_batches;
   }
 
   Device device_auto() { 
