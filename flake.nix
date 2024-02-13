@@ -40,6 +40,7 @@
             # Additional darwin specific inputs can be set here
             libiconv
           ];
+          cargoExtraArgs = "--features app";
           LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
           SARASA_GOTHIC_PATH = "${sarasa-gothic}/share/fonts/truetype/Sarasa-Regular.ttc";
         };
