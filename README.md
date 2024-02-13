@@ -8,9 +8,9 @@ Note that this project is not yet stable, and it is likely that things will chan
 
 ## Dependencies
 
-Spoilers requires CTranslate2 at runtime, and it should be compiled against the corresponding header files in your system. The GUI may need a few more packages based on your platform, and the [Sarasa Gothic] font is packaged into the GUI for CJK font support.
+Spoilers requires CTranslate2 at runtime, and it should be compiled against the corresponding header files in your system. The GUI may need a few more packages based on your platform, and the [Sarasa Gothic](https://github.com/be5invis/Sarasa-Gothic) font is packaged into the GUI for CJK font support.
 
-Take a look at `flake.nix` for more details. 
+Take a look at `flake.nix` in the [repository](https://github.com/Sicheng-Pan/spoilers) for more details. 
 
 ## Model data and adapters
 

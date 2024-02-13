@@ -1,12 +1,7 @@
+#[cfg(feature = "app")]
 mod gui;
 
-use eframe::{run_native, NativeOptions, Result};
-use gui::TranslatorGUI;
-
-fn main() -> Result<()> {
-    run_native(
-        "spoilers",
-        NativeOptions::default(),
-        Box::new(|cc| Box::new(TranslatorGUI::new(cc))),
-    )
+fn main() {
+    #[cfg(feature = "app")]
+    gui::TranslatorGUI::run_native().unwrap();
 }

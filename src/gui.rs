@@ -1,7 +1,10 @@
-use eframe::{get_value, set_value, App, CreationContext, Frame, Storage, APP_KEY};
+use eframe::{
+    get_value, run_native, set_value, App, CreationContext, Frame, NativeOptions, Result, Storage,
+    APP_KEY,
+};
 use egui::{
-    global_dark_light_mode_switch, menu::bar, CentralPanel, ComboBox, Context, Direction, FontData,
-    FontDefinitions, FontFamily, Layout, ScrollArea, TopBottomPanel, Ui,
+    global_dark_light_mode_switch, menu::bar, CentralPanel, ComboBox, Context, FontData,
+    FontDefinitions, FontFamily, RichText, ScrollArea, TopBottomPanel, Ui, ViewportBuilder,
 };
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::{Deserialize, Serialize};
@@ -40,6 +43,17 @@ pub struct TranslatorGUI {
 }
 
 impl TranslatorGUI {
+    pub fn run_native() -> Result<()> {
+        let mut native_options = NativeOptions::default();
+        native_options.viewport =
+            ViewportBuilder::default().with_min_inner_size([600_f32, 400_f32]);
+        run_native(
+            "spoilers",
+            native_options,
+            Box::new(|cc| Box::new(TranslatorGUI::new(cc))),
+        )
+    }
+
     pub fn new(cc: &CreationContext) -> Self {
         let mut gui_font = FontDefinitions::default();
         gui_font
@@ -60,12 +74,40 @@ impl TranslatorGUI {
         gui
     }
 
+    pub fn save(&mut self, storage: &mut dyn Storage) {
+        set_value(storage, APP_KEY, self)
+    }
+
     pub fn reload_adapter(&mut self) {
         self.adapter = self.adapter_config.initialize().ok();
     }
 
     pub fn reload_translator(&mut self) {
         self.translator = self.translator_config.initialize().ok();
+    }
+
+    pub fn menu_bar(&mut self, ctx: &Context) {
+        TopBottomPanel::top("menu").show(ctx, |ui| {
+            bar(ui, |ui| {
+                global_dark_light_mode_switch(ui);
+                enum_to_selectable(ui, &mut self.gui_mode, GUIMode::iter());
+            });
+        });
+    }
+
+    pub fn status_bar(&mut self, ctx: &Context) {
+        TopBottomPanel::bottom("status").show(ctx, |ui| {
+            bar(ui, |ui| {
+                ui.label(match self.adapter {
+                    Some(_) => "Adapter loaded",
+                    None => "No adapter loaded",
+                });
+                ui.label(match self.translator {
+                    Some(_) => "Model loaded",
+                    None => "No model loaded",
+                })
+            });
+        });
     }
 
     pub fn text_translate_panel(&mut self, ctx: &Context) {
@@ -89,13 +131,9 @@ impl TranslatorGUI {
                     ScrollArea::vertical()
                         .id_source("source_panel")
                         .show(&mut columns[0], |ui| {
-                            ui.allocate_ui_with_layout(
-                                ui.available_size(),
-                                Layout::centered_and_justified(Direction::TopDown),
-                                |ui| {
-                                    ui.text_edit_multiline(&mut self.source_content);
-                                },
-                            );
+                            ui.centered_and_justified(|ui| {
+                                ui.text_edit_multiline(&mut self.source_content);
+                            })
                         });
                     columns[1].horizontal(|ui| {
                         let to_label = ui.label("To");
@@ -116,32 +154,23 @@ impl TranslatorGUI {
                                     &self.source_language,
                                     &self.target_language,
                                 )
-                                .unwrap_or_default();
+                                .unwrap_or_default()
                         }
                     });
                     ScrollArea::vertical()
                         .id_source("target_panel")
                         .show(&mut columns[1], |ui| {
-                            ui.allocate_ui_with_layout(
-                                ui.available_size(),
-                                Layout::centered_and_justified(Direction::TopDown),
-                                |ui| {
-                                    ui.label(&self.target_content);
-                                },
-                            );
+                            let rich_text = RichText::new(&self.target_content);
+                            ui.label(rich_text);
                         });
                 });
             } else {
-                ui.allocate_ui_with_layout(
-                    ui.available_size(),
-                    Layout::centered_and_justified(Direction::TopDown),
-                    |ui| {
-                        ui.label(format!(
-                            "Please reload the config using the {} panel",
-                            GUIMode::Config
-                        ));
-                    },
-                );
+                ui.centered_and_justified(|ui| {
+                    ui.label(format!(
+                        "Please reload the config using the {} panel",
+                        GUIMode::Config
+                    ));
+                });
             }
         });
     }
@@ -161,12 +190,11 @@ impl TranslatorGUI {
                 ui.text_edit_singleline(&mut self.adapter_config.source)
                     .labelled_by(adapter_label.id)
                     .on_hover_ui(|ui| {
-                        let hint = match self.adapter_config.kind {
+                        ui.label(match self.adapter_config.kind {
                             AdapterKind::None => "Not used",
                             AdapterKind::NLLBTokenizerHub => "Identifier of model on Hugging Face (e.g. facebook/nllb-200-distilled-600M)",
                             AdapterKind::NLLBTokenizerLocal => "Path to the local tokenizer weights (e.g. tokenizer.json)",
-                        };
-                        ui.label(hint);
+                        });
                     });
             });
             ui.horizontal(|ui| {
@@ -201,39 +229,25 @@ impl TranslatorGUI {
                 })
         });
     }
-}
 
-impl App for TranslatorGUI {
-    fn save(&mut self, storage: &mut dyn Storage) {
-        set_value(storage, APP_KEY, self)
-    }
-
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        TopBottomPanel::top("menu").show(ctx, |ui| {
-            bar(ui, |ui| {
-                global_dark_light_mode_switch(ui);
-                enum_to_selectable(ui, &mut self.gui_mode, GUIMode::iter());
-            });
-        });
-
-        TopBottomPanel::bottom("status").show(ctx, |ui| {
-            bar(ui, |ui| {
-                ui.label(match self.adapter {
-                    Some(_) => "Adapter loaded",
-                    None => "No adapter loaded",
-                });
-                ui.label(match self.translator {
-                    Some(_) => "Model loaded",
-                    None => "No model loaded",
-                })
-            });
-        });
-
+    pub fn gui(&mut self, ctx: &Context) {
+        self.menu_bar(ctx);
+        self.status_bar(ctx);
         match self.gui_mode {
             GUIMode::Translate => self.text_translate_panel(ctx),
             GUIMode::Config => self.config_panel(ctx),
             GUIMode::Readme => self.readme_panel(ctx),
         };
+    }
+}
+
+impl App for TranslatorGUI {
+    fn save(&mut self, storage: &mut dyn Storage) {
+        self.save(storage);
+    }
+
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        self.gui(ctx);
     }
 }
 
