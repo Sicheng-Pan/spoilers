@@ -198,7 +198,7 @@ impl TranslatorGUI {
                     });
             });
             ui.horizontal(|ui| {
-                let model_label = ui.label("Model:");
+                let model_label = ui.label("Model source:");
                 ui.text_edit_singleline(&mut self.translator_config.model_path)
                     .labelled_by(model_label.id)
                     .on_hover_ui(|ui| {

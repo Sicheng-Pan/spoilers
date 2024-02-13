@@ -18,4 +18,6 @@ Spoilers should be able to run CTranslate2 compatible models, given the appropri
 
 Take a look at [CTranslate2 documentation](https://opennmt.net/CTranslate2) for how to convert models into compatible formats.
 
-For the GUI, we the adapter to tokenize raw inputs for the model and parse output tokens from the model. For example, compatible [NLLB-200](https://forum.opennmt.net/t/nllb-200-with-ctranslate2/5090) models can be used together with [tokenizers](https://docs.rs/tokenizers/latest/tokenizers).
+The GUI needs adapters to tokenize raw inputs for the model and parse output tokens from the model. Adapaters are wrappers of tokenizers, which can perform additional processing, like model-specific formatting, after tokenization.
+
+To get started, [here](https://archive.org/details/ctranslate2-nllb-1.3b) is a collection of tokenizer and model weights for the [NLLB-1.3B](https://huggingface.co/facebook/nllb-200-distilled-1.3B) model that can be used with the GUI.
