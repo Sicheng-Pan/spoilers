@@ -34,6 +34,24 @@
         "type": "github"
       }
     },
+    "ctranslate2-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1707759448,
+        "narHash": "sha256-IjH1PAP998QM726rb/rZI0BOrn89IZXkEfZbQCgoFzs=",
+        "ref": "refs/heads/master",
+        "rev": "8e827337f50c83212702f89f1e6b0681024872d0",
+        "revCount": 2136,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/OpenNMT/CTranslate2"
+      },
+      "original": {
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/OpenNMT/CTranslate2"
+      }
+    },
     "fenix": {
       "inputs": {
         "nixpkgs": "nixpkgs_2",
@@ -119,13 +137,31 @@
         "type": "github"
       }
     },
+    "onednn-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1707869996,
+        "narHash": "sha256-tkJBAC4c4aU9hK9m0oc5aEMBKYVLroPyxMdq2YDdhxU=",
+        "owner": "oneapi-src",
+        "repo": "oneDNN",
+        "rev": "a39f0275001c2dc76d98a51108c59cdaf8e5845f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oneapi-src",
+        "repo": "oneDNN",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "advisory-db": "advisory-db",
         "crane": "crane",
+        "ctranslate2-src": "ctranslate2-src",
         "fenix": "fenix",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": "nixpkgs_3",
+        "onednn-src": "onednn-src"
       }
     },
     "rust-analyzer-src": {

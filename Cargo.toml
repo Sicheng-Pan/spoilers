@@ -11,6 +11,7 @@ name = "spoilers"
 required-features = [ "app" ]
 
 [build-dependencies]
+cmake = { version = "0", optional = true }
 cxx-build = "1"
 
 [dependencies]
@@ -25,9 +26,14 @@ rten = { version = "0", optional = true }
 serde = { version = "1", features = [ "derive" ] }
 strum = { version = "0", features = [ "derive" ] }
 text-splitter = { version = "0", features = [ "tokenizers" ] }
-tokenizers = { version = "0", features = [ "http" ] }
+tokenizers = "0"
 toml = "0"
 xcap = { version = "0", optional = true }
 
 [features]
 app = [ "eframe", "egui", "egui_commonmark" ]
+static = [ "cmake" ]
+
+[profile.release]
+lto = "thin"
+opt-level = "s"

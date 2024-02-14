@@ -8,9 +8,17 @@
       flake = false;
       url = "github:rustsec/advisory-db";
     };
+    ctranslate2-src = {
+      flake = false;
+      url = "git+https://github.com/OpenNMT/CTranslate2?submodules=1";
+    };
+    onednn-src = {
+      flake = false;
+      url = "github:oneapi-src/oneDNN";
+    };
   };
 
-  outputs = { self, crane, fenix, flake-utils, nixpkgs, advisory-db }:
+  outputs = { self, crane, fenix, flake-utils, nixpkgs, advisory-db, ctranslate2-src, onednn-src }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -22,7 +30,7 @@
         commonArgs = with pkgs; rec {
           inherit src;
           strictDeps = true;
-          nativeBuildInputs = [ pkg-config ];
+          nativeBuildInputs = [ cmake pkg-config ];
           buildInputs = [
             # Add additional build inputs here
             ctranslate2
@@ -42,7 +50,9 @@
           ];
           cargoExtraArgs = "--features app";
           LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
-          SARASA_GOTHIC_PATH = "${sarasa-gothic}/share/fonts/truetype/Sarasa-Regular.ttc";
+          CTRANSLATE2_SRC = ctranslate2-src;
+          ONEDNN_SRC = onednn-src;
+          CJK_PATH = "${sarasa-gothic}/share/fonts/truetype/Sarasa-Regular.ttc";
         };
 
         craneLibLLvmTools = craneLib.overrideToolchain

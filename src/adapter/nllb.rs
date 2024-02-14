@@ -18,17 +18,9 @@ pub struct NLLBTokenizerAdapter {
 }
 
 impl NLLBTokenizerAdapter {
-    /// Load from local file
-    pub fn new_from_file(file: impl AsRef<Path>) -> Result<Self> {
+    pub fn new(file: impl AsRef<Path>) -> Result<Self> {
         Ok(Self {
             tokenizer: Tokenizer::from_file(file).map_err(emsg)?,
-        })
-    }
-
-    /// Download from Hugging Face Hub
-    pub fn new_from_hub(identifier: impl AsRef<str>) -> Result<Self> {
-        Ok(Self {
-            tokenizer: Tokenizer::from_pretrained(identifier, None).map_err(emsg)?,
         })
     }
 }

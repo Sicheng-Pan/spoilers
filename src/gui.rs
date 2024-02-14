@@ -15,8 +15,8 @@ use spoilers::{
 use std::fmt::Display;
 use strum::{Display as EnumDisplay, EnumIter, IntoEnumIterator};
 
-const CJK: &str = "Sarasa-Gothic-Regular";
-const CJK_BINARY: &[u8] = include_bytes!(env!("SARASA_GOTHIC_PATH"));
+const CJK: &str = "CJK-font";
+const CJK_BINARY: &[u8] = include_bytes!(env!("CJK_PATH"));
 const README: &str = include_str!("../README.md");
 
 #[derive(Clone, Debug, Default, Deserialize, EnumDisplay, EnumIter, Eq, PartialEq, Serialize)]
@@ -192,8 +192,7 @@ impl TranslatorGUI {
                     .on_hover_ui(|ui| {
                         ui.label(match self.adapter_config.kind {
                             AdapterKind::None => "Not used",
-                            AdapterKind::NLLBTokenizerHub => "Identifier of model on Hugging Face (e.g. facebook/nllb-200-distilled-600M)",
-                            AdapterKind::NLLBTokenizerLocal => "Path to the local tokenizer weights (e.g. tokenizer.json)",
+                            AdapterKind::NLLBTokenizer => "Path to the tokenizer file",
                         });
                     });
             });

@@ -9,8 +9,7 @@ pub mod nllb;
 pub enum AdapterKind {
     #[default]
     None,
-    NLLBTokenizerHub,
-    NLLBTokenizerLocal,
+    NLLBTokenizer,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -24,12 +23,7 @@ impl AdapterConfig {
     pub fn initialize(&self) -> Result<Box<dyn Adapter>> {
         match self.kind {
             AdapterKind::None => Err(emsg("Missing adapter configuration")),
-            AdapterKind::NLLBTokenizerHub => {
-                Ok(Box::new(NLLBTokenizerAdapter::new_from_hub(&self.source)?))
-            }
-            AdapterKind::NLLBTokenizerLocal => {
-                Ok(Box::new(NLLBTokenizerAdapter::new_from_file(&self.source)?))
-            }
+            AdapterKind::NLLBTokenizer => Ok(Box::new(NLLBTokenizerAdapter::new(&self.source)?)),
         }
     }
 }
